@@ -7,12 +7,28 @@
     "api/chat.js": {
       "memory": 1024,
       "maxDuration": 30
+    },
+    "api/status.js": {
+      "memory": 256,
+      "maxDuration": 10
+    },
+    "api/config.js": {
+      "memory": 256,
+      "maxDuration": 10
     }
   },
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "src": "/api/chat",
+      "dest": "/api/chat.js"
+    },
+    {
+      "src": "/status",
+      "dest": "/api/status.js"
+    },
+    {
+      "src": "/config",
+      "dest": "/api/config.js"
     },
     {
       "src": "/(.*)",
