@@ -1,30 +1,9 @@
 {
   "version": 2,
-  "buildCommand": "mkdir -p public",
-  "outputDirectory": ".",
-  "public": false,
   "functions": {
     "api/chat.js": {
       "memory": 1024,
       "maxDuration": 30
     }
-  },
-  "routes": [
-    {
-      "src": "/status",
-      "dest": "/api/chat.js"
-    },
-    {
-      "src": "/config",
-      "dest": "/api/chat.js"
-    },
-    {
-      "src": "/api/chat",
-      "dest": "/api/chat.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/api/chat.js"
-    }
-  ]
+  }
 }
