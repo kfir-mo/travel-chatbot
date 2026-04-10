@@ -160,9 +160,13 @@ export default async function handler(req, res) {
     return;
   }
 
+  // Route based on URL path
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const path = url.pathname;
+
   // Handle different routes
   if (req.method === 'GET') {
-    if (req.url === '/status') {
+    if (path === '/status') {
       // Handle status endpoint
       const result = { wordpress: {}, openai: {}, config: {} };
 
@@ -172,7 +176,7 @@ export default async function handler(req, res) {
         wp_user: WP_USER || null,
         wp_tag_ids: WP_TAG_IDS || 'none (all posts)',
         wp_max_posts: WP_MAX_POSTS,
-        openai_model: env.OPENAI_MODEL || 'gpt-4o',
+        openai_model: env.OPENAI_MODEL || env.AI_MODEL || 'gpt-4o',
         openai_key_set: !!(env.OPENAI_API_KEY || env.AI_KEY),
         sf_key_set: !!env.SECRETFLIGHTS_API_KEY,
         skyscanner_aff_set: !!env.SKYSCANNER_AFFILIATE_ID,
@@ -194,7 +198,7 @@ export default async function handler(req, res) {
       // Check OpenAI
       try {
         if (!env.OPENAI_API_KEY && !env.AI_KEY) throw new Error('API key not set');
-        result.openai = { ok: true, model: env.OPENAI_MODEL || 'gpt-4o' };
+        result.openai = { ok: true, model: env.OPENAI_MODEL || env.AI_MODEL || 'gpt-4o' };
       } catch (err) {
         result.openai = { ok: false, error: err.message };
       }
@@ -212,7 +216,7 @@ export default async function handler(req, res) {
       };
 
       res.status(200).json(result);
-    } else if (req.url === '/config') {
+    } else if (path === '/config') {
       // Handle config endpoint
       const destination = env.SITE_DESTINATION || 'בחריין';
       const iata = env.SITE_DESTINATION_IATA || 'BAH';
@@ -228,7 +232,7 @@ export default async function handler(req, res) {
         iata,
         quickReplies
       });
-    } else if (req.url === '/' || req.url === '/index.html') {
+    } else if (path === '/' || path === '/index.html') {
       try {
         const filePath = join(__dirname, '..', 'local-test', 'index.html');
         const data = readFileSync(filePath, 'utf8');
@@ -237,25 +241,25 @@ export default async function handler(req, res) {
       } catch (err) {
         res.status(500).json({ error: 'Error loading index.html' });
       }
-    } else if (req.url.endsWith('.css')) {
+    } else if (path.endsWith('.css')) {
       try {
-        const filePath = join(__dirname, '..', 'local-test', req.url);
+        const filePath = join(__dirname, '..', 'local-test', path);
         const data = readFileSync(filePath, 'utf8');
         res.setHeader('Content-Type', 'text/css');
         res.status(200).send(data);
       } catch (err) {
         res.status(404).json({ error: 'CSS file not found' });
       }
-    } else if (req.url.endsWith('.js')) {
+    } else if (path.endsWith('.js')) {
       try {
-        const filePath = join(__dirname, '..', 'local-test', req.url);
+        const filePath = join(__dirname, '..', 'local-test', path);
         const data = readFileSync(filePath, 'utf8');
         res.setHeader('Content-Type', 'application/javascript');
         res.status(200).send(data);
       } catch (err) {
         res.status(404).json({ error: 'JS file not found' });
       }
-    } else if (req.url === '/favicon.ico') {
+    } else if (path === '/favicon.ico') {
       // Return empty favicon to avoid 404
       res.setHeader('Content-Type', 'image/x-icon');
       res.status(200).send('');
