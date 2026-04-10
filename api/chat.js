@@ -162,7 +162,73 @@ export default async function handler(req, res) {
 
   // Handle different routes
   if (req.method === 'GET') {
-    if (req.url === '/' || req.url === '/index.html') {
+    if (req.url === '/status') {
+      // Handle status endpoint
+      const result = { wordpress: {}, openai: {}, config: {} };
+
+      // Config summary (never expose full keys)
+      result.config = {
+        wp_url: WP_URL || null,
+        wp_user: WP_USER || null,
+        wp_tag_ids: WP_TAG_IDS || 'none (all posts)',
+        wp_max_posts: WP_MAX_POSTS,
+        openai_model: env.OPENAI_MODEL || 'gpt-4o',
+        openai_key_set: !!(env.OPENAI_API_KEY || env.AI_KEY),
+        sf_key_set: !!env.SECRETFLIGHTS_API_KEY,
+        skyscanner_aff_set: !!env.SKYSCANNER_AFFILIATE_ID,
+        booking_aff_set: !!env.BOOKING_AFFILIATE_ID,
+      };
+
+      // Check WordPress
+      try {
+        const posts = await fetchWpPosts();
+        result.wordpress = {
+          ok: true,
+          post_count: posts.length,
+          site: WP_URL,
+        };
+      } catch (err) {
+        result.wordpress = { ok: false, error: err.message };
+      }
+
+      // Check OpenAI
+      try {
+        if (!env.OPENAI_API_KEY && !env.AI_KEY) throw new Error('API key not set');
+        result.openai = { ok: true, model: env.OPENAI_MODEL || 'gpt-4o' };
+      } catch (err) {
+        result.openai = { ok: false, error: err.message };
+      }
+
+      result.flights = env.SECRETFLIGHTS_API_KEY
+        ? { ok: true, message: 'מפתח API מוגדר — בדוק מהצ\'אט' }
+        : { ok: false, error: 'SECRETFLIGHTS_API_KEY לא הוגדר' };
+
+      result.usage = {
+        requests: 0,
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+        estimatedCostUsd: 0,
+      };
+
+      res.status(200).json(result);
+    } else if (req.url === '/config') {
+      // Handle config endpoint
+      const destination = env.SITE_DESTINATION || 'בחריין';
+      const iata = env.SITE_DESTINATION_IATA || 'BAH';
+      const quickReplies = [
+        { label: `✈️ טיסה ל${destination}`, message: `אני מחפש טיסה ל${destination}` },
+        { label: `🏨 מלון ב${destination}`, message: `אני מחפש מלון ב${destination}` },
+        { label: '📍 אטרקציות', message: `מה מומלץ לראות ב${destination}?` },
+      ];
+
+      res.status(200).json({
+        siteName: env.SITE_NAME || 'Visit Bahrain',
+        destination,
+        iata,
+        quickReplies
+      });
+    } else if (req.url === '/' || req.url === '/index.html') {
       try {
         const filePath = join(__dirname, '..', 'local-test', 'index.html');
         const data = readFileSync(filePath, 'utf8');
@@ -189,6 +255,10 @@ export default async function handler(req, res) {
       } catch (err) {
         res.status(404).json({ error: 'JS file not found' });
       }
+    } else if (req.url === '/favicon.ico') {
+      // Return empty favicon to avoid 404
+      res.setHeader('Content-Type', 'image/x-icon');
+      res.status(200).send('');
     } else {
       res.status(404).json({ error: 'Not found' });
     }
