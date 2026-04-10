@@ -4,15 +4,19 @@
   "outputDirectory": ".",
   "public": false,
   "functions": {
-    "local-test/server.js": {
+    "api/chat.js": {
       "memory": 1024,
       "maxDuration": 30
     }
   },
   "routes": [
     {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
       "src": "/(.*)",
-      "dest": "local-test/server.js"
+      "dest": "/api/chat.js"
     }
   ]
 }

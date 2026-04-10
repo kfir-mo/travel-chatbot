@@ -35,3 +35,4 @@ build/
 
 # WordPress
 wp-content/plugins/travel-chatbot/vendor/
+.env*.local
