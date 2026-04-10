@@ -1,0 +1,13 @@
+{
+  "name": "travel-chatbot",
+  "version": "1.0.0",
+  "description": "Travel chatbot for WordPress with AI integration",
+  "main": "api/chat.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node local-test/server.js"
+  },
+  "keywords": ["travel", "chatbot", "wordpress", "ai"],
+  "author": "",
+  "license": "ISC"
+}
