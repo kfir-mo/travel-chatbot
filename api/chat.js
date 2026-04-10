@@ -164,18 +164,7 @@ export default async function handler(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const path = url.pathname;
 
-  // DEBUG: Return path info for /status
-  if (req.method === 'GET' && path === '/status') {
-    res.status(200).json({
-      debug: true,
-      req_url: req.url,
-      headers_host: req.headers.host,
-      constructed_url: `http://${req.headers.host}${req.url}`,
-      pathname: path,
-      full_url: url.toString()
-    });
-    return;
-  }
+  console.log('Request:', req.method, req.url, 'pathname:', path);
 
   // Handle different routes
   if (req.method === 'GET') {
