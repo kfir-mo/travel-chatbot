@@ -14,13 +14,5 @@
       "src": "/(.*)",
       "dest": "local-test/server.js"
     }
-  ],
-  "env": {
-    "WP_URL": "@wp_url",
-    "WP_USERNAME": "@wp_username",
-    "WP_APP_PASSWORD": "@wp_app_password",
-    "AI_PROVIDER": "@ai_provider",
-    "AI_KEY": "@ai_key",
-    "AI_MODEL": "@ai_model"
-  }
+  ]
 }
