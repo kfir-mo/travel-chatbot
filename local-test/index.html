@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Travel Chatbot — Dashboard</title>
+  <link rel="stylesheet" href="chat-widget.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      background: #0F172A;
+      color: #E2E8F0;
+      min-height: 100vh;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      background: #1E293B;
+      border-bottom: 1px solid #334155;
+      padding: 0 28px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .topbar-logo { font-size: 22px; }
+    .topbar h1  { font-size: 17px; font-weight: 700; color: #F1F5F9; }
+    .topbar-sub { font-size: 13px; color: #64748B; margin-right: 4px; }
+    .topbar-actions { margin-right: auto; display: flex; gap: 10px; align-items: center; }
+
+    .btn-refresh {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 8px;
+      background: #1D4ED8; color: #fff; border: none;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-refresh:hover  { background: #1E40AF; }
+    .btn-refresh:disabled { background: #334155; color: #64748B; cursor: not-allowed; }
+    .btn-refresh .spin  { display: inline-block; }
+    .btn-refresh.loading .spin { animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .last-checked { font-size: 12px; color: #475569; }
+
+    /* ── Layout ── */
+    .container { max-width: 1000px; margin: 0 auto; padding: 32px 20px 100px; }
+
+    .section-title {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+      color: #475569; text-transform: uppercase; margin-bottom: 14px;
+    }
+
+    /* ── Status cards grid ── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: #1E293B;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .card.ok     { border-color: #166534; }
+    .card.error  { border-color: #991B1B; }
+    .card.loading { border-color: #1E40AF; }
+
+    .card-glow {
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      border-radius: 14px 14px 0 0;
+    }
+    .card.ok    .card-glow { background: linear-gradient(90deg, #22C55E, #16A34A); }
+    .card.error .card-glow { background: linear-gradient(90deg, #EF4444, #DC2626); }
+    .card.loading .card-glow { background: linear-gradient(90deg, #3B82F6, #6366F1); animation: shimmer 1.5s ease-in-out infinite; background-size: 200%; }
+    @keyframes shimmer { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+
+    .card-header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
+    .card-icon {
+      width: 42px; height: 42px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+    .card.ok    .card-icon { background: #14532D; }
+    .card.error .card-icon { background: #450A0A; }
+    .card.loading .card-icon { background: #1E3A8A; }
+    .card-title { font-size: 15px; font-weight: 700; color: #F1F5F9; margin-bottom: 3px; }
+    .card-status-text {
+      font-size: 12px; font-weight: 600;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .card.ok    .card-status-text { color: #4ADE80; }
+    .card.error .card-status-text { color: #F87171; }
+    .card.loading .card-status-text { color: #93C5FD; }
+
+    .card-body { display: flex; flex-direction: column; gap: 8px; }
+
+    .stat-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 10px; background: #0F172A; border-radius: 8px;
+      font-size: 13px;
+    }
+    .stat-label { color: #64748B; }
+    .stat-value { color: #CBD5E1; font-weight: 600; font-family: monospace; font-size: 12px; }
+    .stat-value.good  { color: #4ADE80; }
+    .stat-value.bad   { color: #F87171; }
+
+    .error-box {
+      background: #450A0A; border: 1px solid #7F1D1D;
+      border-radius: 8px; padding: 10px 12px;
+      font-size: 12px; color: #FCA5A5; line-height: 1.5;
+      word-break: break-word;
+    }
+
+    /* ── Posts preview table ── */
+    .posts-section { margin-top: 32px; }
+
+    .posts-table-wrap {
+      background: #1E293B; border: 1px solid #334155;
+      border-radius: 14px; overflow: hidden;
+    }
+
+    .posts-table { width: 100%; border-collapse: collapse; }
+    .posts-table th {
+      background: #0F172A; padding: 11px 16px;
+      font-size: 11px; font-weight: 700; color: #475569;
+      text-align: right; text-transform: uppercase; letter-spacing: 0.06em;
+      border-bottom: 1px solid #334155;
+    }
+    .posts-table td {
+      padding: 11px 16px; font-size: 13px; color: #CBD5E1;
+      border-bottom: 1px solid #1E293B; vertical-align: top;
+    }
+    .posts-table tr:last-child td { border-bottom: none; }
+    .posts-table tr:hover td { background: #0F172A; }
+
+    .post-title-cell { font-weight: 600; color: #F1F5F9; max-width: 260px; }
+    .post-url-cell   { color: #3B82F6; font-size: 12px; font-family: monospace; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .post-len-cell   { color: #64748B; font-family: monospace; font-size: 12px; }
+    .post-url-cell a { color: inherit; text-decoration: none; }
+    .post-url-cell a:hover { text-decoration: underline; }
+
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+    }
+    .badge-green { background: #14532D; color: #4ADE80; }
+    .badge-blue  { background: #1E3A8A; color: #93C5FD; }
+    .badge-gray  { background: #1E293B; color: #475569; border: 1px solid #334155; }
+
+    .skeleton {
+      background: linear-gradient(90deg, #1E293B 25%, #334155 50%, #1E293B 75%);
+      background-size: 200% 100%;
+      animation: skeleton-shine 1.4s ease infinite;
+      border-radius: 4px; height: 14px;
+    }
+    @keyframes skeleton-shine { to { background-position: -200% 0; } }
+
+    .empty-state {
+      padding: 40px; text-align: center; color: #475569; font-size: 14px;
+    }
+
+    /* ── Usage bar (topbar inline) ── */
+    .usage-pill {
+      display: flex; align-items: center; gap: 8px;
+      background: #0F172A; border: 1px solid #334155;
+      border-radius: 20px; padding: 5px 14px;
+      font-size: 12px; color: #64748B;
+    }
+    .usage-pill strong { color: #CBD5E1; }
+    .usage-pill .cost  { color: #4ADE80; font-weight: 700; }
+
+    /* ── Flight logs section ── */
+    .logs-section { margin-top: 28px; }
+
+    .log-table-wrap {
+      background: #1E293B; border: 1px solid #334155;
+      border-radius: 14px; overflow: hidden;
+    }
+
+    .log-table { width: 100%; border-collapse: collapse; }
+    .log-table th {
+      background: #0F172A; padding: 10px 14px;
+      font-size: 11px; font-weight: 700; color: #475569;
+      text-align: right; text-transform: uppercase; letter-spacing: 0.06em;
+      border-bottom: 1px solid #334155;
+    }
+    .log-table td {
+      padding: 10px 14px; font-size: 12px; color: #CBD5E1;
+      border-bottom: 1px solid #1E293B; vertical-align: top; font-family: monospace;
+    }
+    .log-table tr:last-child td { border-bottom: none; }
+    .log-status-ok   { color: #4ADE80; font-weight: 700; }
+    .log-status-err  { color: #F87171; font-weight: 700; }
+    .log-url  { color: #93C5FD; word-break: break-all; max-width: 380px; }
+    .log-body { color: #64748B; max-width: 260px; word-break: break-all; }
+    .log-ts   { color: #475569; white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <span class="topbar-logo">✈️</span>
+  <div>
+    <h1>Travel Chatbot</h1>
+  </div>
+  <span class="topbar-sub">לוח בקרה</span>
+  <div class="topbar-actions">
+    <div class="usage-pill" id="usage-pill" style="display:none">
+      🤖 <strong id="pill-requests">0</strong> בקשות &nbsp;|&nbsp;
+      🪙 <strong id="pill-tokens">0</strong> טוקנים &nbsp;|&nbsp;
+      <span class="cost" id="pill-cost">$0.0000</span>
+    </div>
+    <span class="last-checked" id="last-checked"></span>
+    <button class="btn-refresh" id="btn-refresh" onclick="runChecks()">
+      <span class="spin">⟳</span> בדוק הכל
+    </button>
+  </div>
+</div>
+
+<div class="container">
+
+  <p class="section-title">סטטוס שירותים</p>
+
+  <!-- Status cards -->
+  <div class="cards-grid">
+
+    <!-- WordPress card -->
+    <div class="card loading" id="card-wp">
+      <div class="card-glow"></div>
+      <div class="card-header">
+        <div class="card-icon">🌐</div>
+        <div>
+          <div class="card-title">WordPress</div>
+          <div class="card-status-text" id="wp-status-text">⏳ בודק...</div>
+        </div>
+      </div>
+      <div class="card-body" id="wp-body">
+        <div class="skeleton" style="width:100%;height:34px;border-radius:8px;"></div>
+        <div class="skeleton" style="width:100%;height:34px;border-radius:8px;"></div>
+      </div>
+    </div>
+
+    <!-- OpenAI card -->
+    <div class="card loading" id="card-openai">
+      <div class="card-glow"></div>
+      <div class="card-header">
+        <div class="card-icon">🤖</div>
+        <div>
+          <div class="card-title">OpenAI</div>
+          <div class="card-status-text" id="openai-status-text">⏳ בודק...</div>
+        </div>
+      </div>
+      <div class="card-body" id="openai-body">
+        <div class="skeleton" style="width:100%;height:34px;border-radius:8px;"></div>
+        <div class="skeleton" style="width:100%;height:34px;border-radius:8px;"></div>
+      </div>
+    </div>
+
+    <!-- Flights card -->
+    <div class="card loading" id="card-flights">
+      <div class="card-glow"></div>
+      <div class="card-header">
+        <div class="card-icon">✈️</div>
+        <div>
+          <div class="card-title">Flights API</div>
+          <div class="card-status-text" id="flights-status-text">⏳ בודק...</div>
+        </div>
+      </div>
+      <div class="card-body" id="flights-body">
+        <div class="skeleton" style="width:100%;height:34px;border-radius:8px;"></div>
+        <div class="skeleton" style="width:100%;height:34px;border-radius:8px;"></div>
+      </div>
+    </div>
+
+    <!-- Usage card -->
+    <div class="card loading" id="card-usage">
+      <div class="card-glow"></div>
+      <div class="card-header">
+        <div class="card-icon">📊</div>
+        <div>
+          <div class="card-title">שימוש ב-API</div>
+          <div class="card-status-text" id="usage-status-text">⏳ בודק...</div>
+        </div>
+      </div>
+      <div class="card-body" id="usage-body">
+        <div class="skeleton" style="width:100%;height:34px;border-radius:8px;"></div>
+        <div class="skeleton" style="width:100%;height:34px;border-radius:8px;"></div>
+      </div>
+    </div>
+
+    <!-- Config card -->
+    <div class="card loading" id="card-config">
+      <div class="card-glow"></div>
+      <div class="card-header">
+        <div class="card-icon">⚙️</div>
+        <div>
+          <div class="card-title">הגדרות .env</div>
+          <div class="card-status-text" id="config-status-text">⏳ בודק...</div>
+        </div>
+      </div>
+      <div class="card-body" id="config-body">
+        <div class="skeleton" style="width:100%;height:34px;border-radius:8px;"></div>
+        <div class="skeleton" style="width:100%;height:34px;border-radius:8px;"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Flight API Logs -->
+  <div class="logs-section">
+    <p class="section-title">לוג קריאות Flights API</p>
+    <div class="log-table-wrap">
+      <div class="empty-state" id="logs-placeholder">טרם בוצעו קריאות לטיסות בסשן הנוכחי.</div>
+      <table class="log-table" id="logs-table" style="display:none;">
+        <thead>
+          <tr>
+            <th>שעה</th>
+            <th>סטטוס</th>
+            <th>URL שנקרא</th>
+            <th>תשובה (ראשית)</th>
+          </tr>
+        </thead>
+        <tbody id="logs-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Posts preview -->
+  <div class="posts-section">
+    <p class="section-title">פוסטים שנטענו מ-WordPress</p>
+    <div class="posts-table-wrap">
+      <div class="empty-state" id="posts-placeholder">⏳ ממתין לבדיקה...</div>
+      <table class="posts-table" id="posts-table" style="display:none;">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>כותרת</th>
+            <th>קישור</th>
+            <th>תווים</th>
+          </tr>
+        </thead>
+        <tbody id="posts-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  async function runChecks() {
+    const btn = document.getElementById('btn-refresh');
+    btn.disabled = true;
+    btn.classList.add('loading');
+
+    setCardLoading('wp');
+    setCardLoading('openai');
+    setCardLoading('flights');
+    setCardLoading('usage');
+    setCardLoading('config');
+
+    document.getElementById('posts-placeholder').textContent = '⏳ טוען פוסטים...';
+    document.getElementById('posts-placeholder').style.display = 'block';
+    document.getElementById('posts-table').style.display = 'none';
+
+    try {
+      const res  = await fetch('/status');
+      const data = await res.json();
+
+      renderWordPress(data.wordpress);
+      renderOpenAI(data.openai);
+      renderFlights(data.flights);
+      renderUsage(data.usage);
+      renderConfig(data.config);
+      renderPosts(data.wordpress);
+      renderFlightLogs(data.flightLogs || []);
+
+      const now = new Date();
+      document.getElementById('last-checked').textContent =
+        `עודכן: ${now.toLocaleTimeString('he-IL')}`;
+    } catch (err) {
+      ['wp','openai','flights','usage','config'].forEach(id => setCardError(id, 'שגיאת תקשורת עם השרת'));
+    }
+
+    btn.disabled = false;
+    btn.classList.remove('loading');
+  }
+
+  /* ── Card state helpers ── */
+  function setCardLoading(id) {
+    const card = document.getElementById(`card-${id}`);
+    card.className = 'card loading';
+    document.getElementById(`${id}-status-text`).textContent = '⏳ בודק...';
+    document.getElementById(`${id}-body`).innerHTML = `
+      <div class="skeleton" style="width:100%;height:34px;border-radius:8px;"></div>
+      <div class="skeleton" style="width:100%;height:34px;border-radius:8px;margin-top:8px;"></div>`;
+  }
+
+  function setCardError(id, msg) {
+    const card = document.getElementById(`card-${id}`);
+    card.className = 'card error';
+    document.getElementById(`${id}-status-text`).innerHTML = '❌ שגיאה';
+    document.getElementById(`${id}-body`).innerHTML =
+      `<div class="error-box">${esc(msg)}</div>`;
+  }
+
+  function statRow(label, value, cls = '') {
+    return `<div class="stat-row">
+      <span class="stat-label">${label}</span>
+      <span class="stat-value ${cls}">${esc(value)}</span>
+    </div>`;
+  }
+
+  /* ── Renderers ── */
+  function renderWordPress(wp) {
+    const card = document.getElementById('card-wp');
+    if (wp.ok) {
+      card.className = 'card ok';
+      document.getElementById('wp-status-text').innerHTML = '✅ מחובר';
+      document.getElementById('wp-body').innerHTML =
+        statRow('אתר', wp.site, '') +
+        statRow('פוסטים שנטענו', `${wp.post_count} פוסטים`, 'good');
+    } else {
+      setCardError('wp', wp.error);
+    }
+  }
+
+  function renderOpenAI(openai) {
+    const card = document.getElementById('card-openai');
+    if (openai.ok) {
+      card.className = 'card ok';
+      document.getElementById('openai-status-text').innerHTML = '✅ פעיל';
+      document.getElementById('openai-body').innerHTML =
+        statRow('מודל', openai.model) +
+        statRow('סטטוס API', 'תגובה תקינה', 'good');
+    } else {
+      setCardError('openai', openai.error);
+    }
+  }
+
+  function renderFlights(f) {
+    if (!f) { setCardError('flights', 'לא התקבלה תשובה'); return; }
+    const card = document.getElementById('card-flights');
+    if (f.ok) {
+      card.className = 'card ok';
+      document.getElementById('flights-status-text').innerHTML = '✅ מפתח מוגדר';
+      document.getElementById('flights-body').innerHTML =
+        statRow('סטטוס', f.message || 'מוגדר', 'good') +
+        statRow('בדיקה חיה', 'שלח הודעה בצ\'אט', '');
+    } else {
+      setCardError('flights', f.error);
+    }
+  }
+
+  function renderUsage(u) {
+    const card = document.getElementById('card-usage');
+    if (!u) { setCardError('usage', 'לא התקבל מידע'); return; }
+    card.className = 'card ok';
+    document.getElementById('usage-status-text').innerHTML = u.requests > 0 ? '✅ פעיל' : '⬜ טרם בשימוש';
+    const costStr = u.requests > 0 ? `~$${u.estimatedCostUsd}` : '—';
+    document.getElementById('usage-body').innerHTML =
+      statRow('בקשות', String(u.requests)) +
+      statRow('טוקנים (input)', u.promptTokens.toLocaleString()) +
+      statRow('טוקנים (output)', u.completionTokens.toLocaleString()) +
+      statRow('עלות משוערת', costStr, u.requests > 0 ? 'good' : '');
+
+    // Update topbar pill
+    if (u.requests > 0) {
+      document.getElementById('usage-pill').style.display = 'flex';
+      document.getElementById('pill-requests').textContent = u.requests;
+      document.getElementById('pill-tokens').textContent   = u.totalTokens.toLocaleString();
+      document.getElementById('pill-cost').textContent     = `$${u.estimatedCostUsd}`;
+    }
+  }
+
+  function renderFlightLogs(logs) {
+    const placeholder = document.getElementById('logs-placeholder');
+    const table       = document.getElementById('logs-table');
+    const tbody       = document.getElementById('logs-tbody');
+
+    if (!logs || logs.length === 0) {
+      placeholder.textContent = 'טרם בוצעו קריאות לטיסות בסשן הנוכחי.';
+      placeholder.style.display = 'block';
+      table.style.display = 'none';
+      return;
+    }
+
+    tbody.innerHTML = logs.map(log => {
+      const time = new Date(log.ts).toLocaleTimeString('he-IL');
+      const ok   = log.status === 200;
+      return `<tr>
+        <td class="log-ts">${esc(time)}</td>
+        <td class="${ok ? 'log-status-ok' : 'log-status-err'}">${esc(String(log.status))}</td>
+        <td class="log-url">${esc(log.url)}</td>
+        <td class="log-body">${esc(log.body)}</td>
+      </tr>`;
+    }).join('');
+
+    placeholder.style.display = 'none';
+    table.style.display = 'table';
+  }
+
+  function renderConfig(cfg) {
+    const card    = document.getElementById('card-config');
+    const allGood = cfg.openai_key_set && !!cfg.wp_url && !!cfg.wp_user && cfg.sf_key_set;
+    card.className = allGood ? 'card ok' : 'card error';
+    document.getElementById('config-status-text').innerHTML =
+      allGood ? '✅ הכל מוגדר' : '⚠️ חסרות הגדרות';
+
+    document.getElementById('config-body').innerHTML =
+      statRow('WP_URL',            cfg.wp_url   || '❌ לא הוגדר',  cfg.wp_url        ? '' : 'bad') +
+      statRow('WP_USERNAME',       cfg.wp_user  || '❌ לא הוגדר',  cfg.wp_user       ? '' : 'bad') +
+      statRow('OPENAI_KEY',        cfg.openai_key_set ? cfg.openai_key_preview : '❌ לא הוגדר', cfg.openai_key_set ? '' : 'bad') +
+      statRow('Flights API Key',   cfg.sf_key_set        ? '✅ מוגדר' : '❌ חסר',  cfg.sf_key_set        ? '' : 'bad') +
+      statRow('Skyscanner Aff.',   cfg.skyscanner_aff_set ? '✅ מוגדר' : '⚠️ חסר', cfg.skyscanner_aff_set ? '' : 'bad') +
+      statRow('Booking Aff.',      cfg.booking_aff_set    ? '✅ מוגדר' : '⚠️ חסר', cfg.booking_aff_set    ? '' : 'bad') +
+      statRow('מודל',              cfg.openai_model) +
+      statRow('מקס׳ פוסטים',      String(cfg.wp_max_posts)) +
+      statRow('סינון תגיות',      cfg.wp_tag_ids || 'ללא (כל הפוסטים)');
+  }
+
+  function renderPosts(wp) {
+    const placeholder = document.getElementById('posts-placeholder');
+    const table       = document.getElementById('posts-table');
+    const tbody       = document.getElementById('posts-tbody');
+
+    if (!wp.ok || !wp.posts || wp.posts.length === 0) {
+      placeholder.textContent = wp.ok ? 'לא נמצאו פוסטים.' : `❌ ${wp.error}`;
+      placeholder.style.display = 'block';
+      table.style.display = 'none';
+      return;
+    }
+
+    tbody.innerHTML = wp.posts.map((post, i) => `
+      <tr>
+        <td><span class="badge badge-blue">${i + 1}</span></td>
+        <td class="post-title-cell">${esc(post.title)}</td>
+        <td class="post-url-cell"><a href="${esc(post.url)}" target="_blank">${esc(post.url)}</a></td>
+        <td class="post-len-cell">${post.content ? post.content.length.toLocaleString() : '—'}</td>
+      </tr>`).join('');
+
+    placeholder.style.display = 'none';
+    table.style.display = 'table';
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Run on load + auto-refresh usage/logs every 30s (lightweight — no full re-check)
+  runChecks();
+
+  async function refreshUsage() {
+    try {
+      const res  = await fetch('/status');
+      const data = await res.json();
+      renderUsage(data.usage);
+      renderFlightLogs(data.flightLogs || []);
+    } catch (_) {}
+  }
+  setInterval(refreshUsage, 30_000);
+</script>
+
+<!-- Chat widget -->
+<script>
+  window.TravelChatbotConfig = {
+    proxyUrl:       'api-proxy.php',
+    title:          'עוזר טיולים',
+    subtitle:       'שאל אותי על יעדים וטיפים לנסיעה',
+    welcomeMessage: 'היי! אני העוזר של האתר 😊 במה אוכל לעזור לך היום?',
+    // Static fallback chips — overwritten by /config fetch below
+    quickReplies: [
+      { label: '📍 אטרקציות', message: 'מה מומלץ לראות?' },
+      { label: '✈️ טיסות',   message: 'אני מחפש טיסה'   },
+      { label: '🏨 מלונות',  message: 'אני מחפש מלון'   },
+    ],
+  };
+  // Fetch dynamic config (destination-specific chips) before widget inits
+  window.TravelChatbotConfigReady = fetch('/config')
+    .then(r => r.json())
+    .then(cfg => {
+      if (cfg.quickReplies) window.TravelChatbotConfig.quickReplies = cfg.quickReplies;
+      if (cfg.siteName)     window.TravelChatbotConfig.title        = cfg.siteName;
+      // Hebrew destination name for the welcome title
+      if (cfg.destination)  window.TravelChatbotConfig.destination  = cfg.destination;
+    })
+    .catch(() => {/* fallback to static */});
+</script>
+<script src="chat-widget.js"></script>
+
+</body>
+</html>

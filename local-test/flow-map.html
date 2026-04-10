@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Travel Chatbot — מפת מסלול משתמש</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f0f4f8;
+    color: #1e293b;
+    padding: 32px 24px 64px;
+    direction: rtl;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #1e40af;
+  }
+  .subtitle {
+    text-align: center;
+    color: #64748b;
+    font-size: 13px;
+    margin-bottom: 40px;
+  }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 40px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #475569;
+  }
+  .legend-box {
+    width: 18px; height: 18px; border-radius: 4px;
+  }
+
+  /* ── Main canvas ── */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  /* ── Node types ── */
+  .node {
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.4;
+    position: relative;
+    max-width: 220px;
+  }
+  .node-start {
+    background: #1e40af;
+    color: #fff;
+    border-radius: 24px;
+    padding: 10px 28px;
+  }
+  .node-bot {
+    background: #fff;
+    border: 2px solid #3b82f6;
+    color: #1e40af;
+  }
+  .node-api {
+    background: #eff6ff;
+    border: 2px dashed #3b82f6;
+    color: #1e40af;
+  }
+  .node-result {
+    background: #f0fdf4;
+    border: 2px solid #22c55e;
+    color: #166534;
+    max-width: 260px;
+  }
+  .node-error {
+    background: #fef2f2;
+    border: 2px solid #ef4444;
+    color: #991b1b;
+    max-width: 260px;
+  }
+  .node-end {
+    background: #f1f5f9;
+    border: 2px solid #94a3b8;
+    color: #475569;
+    border-radius: 24px;
+  }
+  .node-chip {
+    background: #fef9c3;
+    border: 1px solid #ca8a04;
+    color: #713f12;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 14px;
+  }
+
+  /* ── Arrows ── */
+  .arrow {
+    width: 2px;
+    min-height: 24px;
+    background: #94a3b8;
+    margin: 0 auto;
+    position: relative;
+  }
+  .arrow::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid #94a3b8;
+  }
+  .arrow-label {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    color: #64748b;
+    white-space: nowrap;
+    font-style: italic;
+  }
+
+  /* ── Branch container ── */
+  .branches {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    position: relative;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .branch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    padding: 0 12px;
+    flex: 1;
+    max-width: 240px;
+  }
+
+  /* Horizontal connector line between branches */
+  .h-line {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    justify-content: center;
+  }
+  .h-line::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 2px;
+    background: #94a3b8;
+  }
+
+  /* ── Section labels ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    text-align: center;
+    margin: 20px 0 4px;
+  }
+
+  /* ── Chips row ── */
+  .chips-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    max-width: 480px;
+    margin: 4px 0;
+  }
+
+  /* ── Sub-flow box ── */
+  .subflow {
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px 20px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    max-width: 280px;
+  }
+  .subflow-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* ── Page sections ── */
+  .page-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  /* ── Top-level branch strip ── */
+  .top-branches {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+    width: 100%;
+    position: relative;
+  }
+  .top-branches::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 8%;
+    right: 8%;
+    height: 2px;
+    background: #94a3b8;
+  }
+
+  .branch-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    flex: 1;
+    padding: 0 8px;
+    max-width: 220px;
+  }
+
+  .branch-col > .arrow:first-child {
+    margin-top: 0;
+  }
+
+  .branch-label {
+    font-size: 11px;
+    color: #64748b;
+    font-style: italic;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+
+<h1>✈️ Travel Chatbot — מפת מסלול משתמש</h1>
+<p class="subtitle">מסלולי שיחה אפשריים מהתחלה עד סוף</p>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-box" style="background:#1e40af"></div> נקודת כניסה</div>
+  <div class="legend-item"><div class="legend-box" style="background:#fff;border:2px solid #3b82f6"></div> תגובת בוט (pre-built)</div>
+  <div class="legend-item"><div class="legend-box" style="background:#eff6ff;border:2px dashed #3b82f6"></div> קריאת API</div>
+  <div class="legend-item"><div class="legend-box" style="background:#f0fdf4;border:2px solid #22c55e"></div> תוצאה מוצלחת</div>
+  <div class="legend-item"><div class="legend-box" style="background:#fef2f2;border:2px solid #ef4444"></div> תגובת שגיאה / ריק</div>
+  <div class="legend-item"><div class="legend-box" style="background:#fff;border:2px solid #8b5cf6"></div> AI (OpenAI)</div>
+</div>
+
+<div class="page-section">
+
+  <!-- Start -->
+  <div class="node node-start">פתיחת הצ'אט</div>
+  <div class="arrow" style="min-height:16px"></div>
+  <div class="node node-bot">הודעת ברוכים הבאים<br><span style="font-weight:400;font-size:12px">+ כפתורי Quick Reply</span></div>
+
+  <!-- Quick Reply chips -->
+  <div class="arrow" style="min-height:16px"></div>
+  <div class="chips-row">
+    <span class="node node-chip">✈️ טיסה לבחריין</span>
+    <span class="node node-chip">🏨 מלון בבחריין</span>
+    <span class="node node-chip">📍 אטרקציות</span>
+    <span class="node node-chip" style="background:#f1f5f9;border-color:#94a3b8;color:#475569">הקלדה חופשית</span>
+  </div>
+
+  <!-- Horizontal branch line -->
+  <div style="height:24px;width:2px;background:#94a3b8;margin:0 auto;position:relative;">
+    <div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #94a3b8;"></div>
+  </div>
+
+  <!-- 3 top-level branches -->
+  <div class="top-branches" style="align-items:flex-start">
+
+    <!-- ── FLIGHT BRANCH ── -->
+    <div class="branch-col">
+      <div class="arrow" style="min-height:20px"></div>
+      <div class="branch-label">כוונת טיסה</div>
+      <div class="node node-bot">מצוין! בואו נמצא דילים<br>מתי תרצה לטוס?</div>
+      <!-- Month chips -->
+      <div class="arrow" style="min-height:14px"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;max-width:200px">
+        <span class="node node-chip" style="font-size:11px">חודש הבא</span>
+        <span class="node node-chip" style="font-size:11px">בקיץ</span>
+        <span class="node node-chip" style="font-size:11px">בסוכות</span>
+        <span class="node node-chip" style="font-size:11px">בפסח</span>
+        <span class="node node-chip" style="font-size:11px">גמיש</span>
+      </div>
+      <div class="arrow" style="min-height:14px"></div>
+      <div class="node node-api">🔌 SecretFlights API<br><span style="font-size:11px;font-weight:400">יעד + חודש (+ תקציב?)</span></div>
+
+      <!-- API result branches -->
+      <div class="arrow" style="min-height:14px"></div>
+      <div style="display:flex;gap:8px;align-items:flex-start;">
+
+        <!-- Deals found -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0;max-width:140px">
+          <div class="branch-label" style="color:#166534">יש דילים</div>
+          <div class="node node-result" style="max-width:140px;font-size:12px">רשימת דילים ✈️<br>+ כפתורי המשך</div>
+          <div class="arrow" style="min-height:12px"></div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px;justify-content:center;max-width:140px">
+            <span class="node node-chip" style="font-size:10px">🏨 מלון שם</span>
+            <span class="node node-chip" style="font-size:10px">📍 מה לראות</span>
+            <span class="node node-chip" style="font-size:10px">💰 שנה תקציב</span>
+          </div>
+          <!-- Budget slider sub-flow -->
+          <div class="arrow" style="min-height:10px"></div>
+          <div class="subflow" style="max-width:140px">
+            <div class="subflow-title">💰 שינוי תקציב</div>
+            <div class="node node-bot" style="max-width:120px;font-size:12px">סליידר מחיר<br>$50–$1,500</div>
+            <div class="arrow" style="min-height:10px"></div>
+            <div class="node node-api" style="max-width:120px;font-size:12px">חיפוש מחדש<br>עם תקציב</div>
+          </div>
+        </div>
+
+        <!-- No deals -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0;max-width:130px">
+          <div class="branch-label" style="color:#991b1b">אין דילים</div>
+          <div class="node node-error" style="max-width:130px;font-size:12px">לא מצאתי דילים<br>לחודש הנבחר 😕</div>
+          <div class="arrow" style="min-height:10px"></div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px;justify-content:center;max-width:130px">
+            <span class="node node-chip" style="font-size:10px">חודש סמוך ±1</span>
+            <span class="node node-chip" style="font-size:10px">חודש סמוך ±2</span>
+            <span class="node node-chip" style="font-size:10px">יעד אחר</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── HOTEL BRANCH ── -->
+    <div class="branch-col">
+      <div class="arrow" style="min-height:20px"></div>
+      <div class="branch-label">כוונת מלון</div>
+
+      <!-- No dates known -->
+      <div class="subflow">
+        <div class="subflow-title">ללא תאריכים</div>
+        <div class="node node-bot" style="font-size:12px">כדאי לדעת תאריכים<br>רוצה לחפש טיסה קודם?</div>
+        <div class="arrow" style="min-height:10px"></div>
+        <div style="display:flex;gap:4px;">
+          <span class="node node-chip" style="font-size:10px">✈️ כן, טיסה</span>
+          <span class="node node-chip" style="font-size:10px">🔍 מלון בלבד</span>
+        </div>
+      </div>
+
+      <div class="arrow" style="min-height:12px"></div>
+
+      <!-- With dates -->
+      <div class="subflow">
+        <div class="subflow-title">עם תאריכים</div>
+        <div class="node node-result" style="font-size:12px">קישור Booking.com<br>עם תאריכים + מחיר</div>
+      </div>
+    </div>
+
+    <!-- ── CONTENT / AI BRANCH ── -->
+    <div class="branch-col">
+      <div class="arrow" style="min-height:20px"></div>
+      <div class="branch-label">שאלת תוכן / AI</div>
+
+      <!-- Attraction type -->
+      <div class="subflow" style="margin-bottom:0">
+        <div class="subflow-title">אטרקציות / לראות</div>
+        <div class="node node-bot" style="font-size:12px">מה סוג האטרקציות?</div>
+        <div class="arrow" style="min-height:8px"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px;justify-content:center;">
+          <span class="node node-chip" style="font-size:10px">🤿 אקסטרים</span>
+          <span class="node node-chip" style="font-size:10px">👨‍👩‍👧 משפחתי</span>
+          <span class="node node-chip" style="font-size:10px">🏛️ תרבות</span>
+          <span class="node node-chip" style="font-size:10px">🍽️ אוכל</span>
+        </div>
+        <div class="arrow" style="min-height:8px"></div>
+        <div class="node" style="background:#fff;border:2px solid #8b5cf6;color:#5b21b6;max-width:140px;font-size:12px">🤖 OpenAI<br>תשובה ממאמרי האתר</div>
+      </div>
+
+      <div class="arrow" style="min-height:10px"></div>
+
+      <!-- General content -->
+      <div class="subflow">
+        <div class="subflow-title">שאלה כללית</div>
+        <div class="node" style="background:#fff;border:2px solid #8b5cf6;color:#5b21b6;max-width:140px;font-size:12px">🤖 OpenAI<br>רשימה ממוספרת<br>+ קישור למאמר</div>
+        <div class="arrow" style="min-height:8px"></div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">
+          <span class="node node-chip" style="font-size:10px">✈️ טיסות</span>
+          <span class="node node-chip" style="font-size:10px">🏨 מלונות</span>
+          <span class="node node-chip" style="font-size:10px">ספר לי עוד</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom note -->
+  <div style="margin-top:48px;text-align:center;font-size:12px;color:#94a3b8;max-width:600px">
+    <strong>הערות:</strong>
+    כל תגובה pre-built מושהית 2.5 שניות כדי שתרגיש טבעית.
+    שיחה שמורה ב-localStorage (6 הודעות אחרונות) ומועברת לשרת עם כל בקשה.
+    הצ'אט עונה אך ורק על סמך מאמרי האתר (Knowledge Base) ולא על בסיס ידע חיצוני.
+  </div>
+
+</div>
+</body>
+</html>

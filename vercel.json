@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "buildCommand": "mkdir -p public",
+  "outputDirectory": ".",
+  "public": false,
+  "functions": {
+    "local-test/server.js": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "local-test/server.js"
+    }
+  ],
+  "env": {
+    "WP_URL": "@wp_url",
+    "WP_USERNAME": "@wp_username",
+    "WP_APP_PASSWORD": "@wp_app_password",
+    "AI_PROVIDER": "@ai_provider",
+    "AI_KEY": "@ai_key",
+    "AI_MODEL": "@ai_model"
+  }
+}
