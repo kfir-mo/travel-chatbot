@@ -1,3 +1,21 @@
 {
-  "version": 2
+  "version": 2,
+  "routes": [
+    {
+      "src": "/status",
+      "dest": "/api/chat.js"
+    },
+    {
+      "src": "/config",
+      "dest": "/api/chat.js"
+    },
+    {
+      "src": "/api/chat",
+      "dest": "/api/chat.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/chat.js"
+    }
+  ]
 }
