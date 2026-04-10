@@ -4,7 +4,7 @@
   "outputDirectory": ".",
   "public": false,
   "functions": {
-    "chat.js": {
+    "api/chat.js": {
       "memory": 1024,
       "maxDuration": 30
     }
@@ -12,19 +12,19 @@
   "routes": [
     {
       "src": "/status",
-      "dest": "/chat.js"
+      "dest": "/api/chat.js"
     },
     {
       "src": "/config",
-      "dest": "/chat.js"
+      "dest": "/api/chat.js"
     },
     {
       "src": "/api/chat",
-      "dest": "/chat.js"
+      "dest": "/api/chat.js"
     },
     {
       "src": "/(.*)",
-      "dest": "/chat.js"
+      "dest": "/api/chat.js"
     }
   ]
 }
